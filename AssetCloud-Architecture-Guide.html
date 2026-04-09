@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AssetCloud — Architecture Guide</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #232735;
+    --border: #2e3345;
+    --accent: #4f8cff;
+    --accent2: #7c5cfc;
+    --accent3: #00c9a7;
+    --accent4: #ff6b6b;
+    --accent5: #ffc248;
+    --text: #e4e7ef;
+    --text2: #9ba3b8;
+    --text3: #6b7280;
+    --radius: 12px;
+    --shadow-hover: 0 4px 20px rgba(0,0,0,0.3);
+    --header-bg: linear-gradient(135deg, #1a1d27 0%, #1e2a4a 100%);
+    --logo-icon-color: #fff;
+    --table-hover: rgba(79,140,255,0.04);
+    --tag-blue-bg: rgba(79,140,255,0.15);
+    --tag-purple-bg: rgba(124,92,252,0.15);
+    --tag-green-bg: rgba(0,201,167,0.15);
+    --tag-red-bg: rgba(255,107,107,0.15);
+    --tag-yellow-bg: rgba(255,194,72,0.15);
+    --layer-channel-bg: rgba(79,140,255,0.12);
+    --layer-channel-border: rgba(79,140,255,0.25);
+    --layer-api-bg: rgba(124,92,252,0.12);
+    --layer-api-border: rgba(124,92,252,0.25);
+    --layer-core-bg: rgba(0,201,167,0.12);
+    --layer-core-border: rgba(0,201,167,0.25);
+    --layer-ai-bg: rgba(255,194,72,0.12);
+    --layer-ai-border: rgba(255,194,72,0.25);
+    --layer-data-bg: rgba(255,107,107,0.12);
+    --layer-data-border: rgba(255,107,107,0.25);
+    --layer-infra-bg: rgba(155,163,184,0.1);
+    --layer-infra-border: rgba(155,163,184,0.2);
+  }
+
+  [data-theme="light"] {
+    --bg: #f5f7fa;
+    --surface: #ffffff;
+    --surface2: #f0f2f5;
+    --border: #d8dce6;
+    --accent: #2563eb;
+    --accent2: #6d28d9;
+    --accent3: #059669;
+    --accent4: #dc2626;
+    --accent5: #d97706;
+    --text: #1e293b;
+    --text2: #475569;
+    --text3: #94a3b8;
+    --shadow-hover: 0 4px 20px rgba(0,0,0,0.08);
+    --header-bg: linear-gradient(135deg, #ffffff 0%, #eef2ff 100%);
+    --logo-icon-color: #fff;
+    --table-hover: rgba(37,99,235,0.04);
+    --tag-blue-bg: rgba(37,99,235,0.1);
+    --tag-purple-bg: rgba(109,40,217,0.1);
+    --tag-green-bg: rgba(5,150,105,0.1);
+    --tag-red-bg: rgba(220,38,38,0.1);
+    --tag-yellow-bg: rgba(217,119,6,0.1);
+    --layer-channel-bg: rgba(37,99,235,0.07);
+    --layer-channel-border: rgba(37,99,235,0.2);
+    --layer-api-bg: rgba(109,40,217,0.07);
+    --layer-api-border: rgba(109,40,217,0.2);
+    --layer-core-bg: rgba(5,150,105,0.07);
+    --layer-core-border: rgba(5,150,105,0.2);
+    --layer-ai-bg: rgba(217,119,6,0.07);
+    --layer-ai-border: rgba(217,119,6,0.2);
+    --layer-data-bg: rgba(220,38,38,0.07);
+    --layer-data-border: rgba(220,38,38,0.2);
+    --layer-infra-bg: rgba(71,85,105,0.06);
+    --layer-infra-border: rgba(71,85,105,0.15);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; transition: background 0.3s, color 0.3s; }
+
+  /* Header */
+  .header { background: var(--header-bg); border-bottom: 1px solid var(--border); padding: 32px 0; transition: background 0.3s; }
+  .header-inner { max-width: 1360px; margin: 0 auto; padding: 0 32px; display: flex; align-items: center; justify-content: space-between; }
+  .logo { display: flex; align-items: center; gap: 14px; }
+  .logo-icon { width: 44px; height: 44px; background: linear-gradient(135deg, var(--accent), var(--accent2)); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 700; color: #fff; }
+  .logo-text h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+  .logo-text span { font-size: 12px; color: var(--text2); text-transform: uppercase; letter-spacing: 1.5px; }
+  .header-meta { text-align: right; font-size: 13px; color: var(--text3); }
+  .header-meta strong { color: var(--text2); }
+
+  /* Navigation */
+  .nav { background: var(--surface); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
+  .nav-inner { max-width: 1360px; margin: 0 auto; padding: 0 32px; display: flex; gap: 4px; overflow-x: auto; }
+  .nav-btn { padding: 14px 20px; font-size: 13px; font-weight: 600; color: var(--text2); background: none; border: none; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; white-space: nowrap; }
+  .nav-btn:hover { color: var(--text); }
+  .nav-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* Main */
+  .main { max-width: 1360px; margin: 0 auto; padding: 32px; }
+  .section { display: none; animation: fadeIn 0.3s ease; }
+  .section.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* Cards */
+  .card-grid { display: grid; gap: 20px; margin-top: 24px; }
+  .grid-2 { grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); }
+  .grid-3 { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+  .grid-4 { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; transition: border-color 0.2s, transform 0.15s; }
+  .card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .card h3 { font-size: 16px; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+  .card p { font-size: 14px; color: var(--text2); }
+  .card .tag { display: inline-block; font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; margin-right: 6px; margin-top: 10px; }
+
+  /* Badge colors */
+  .tag-blue { background: var(--tag-blue-bg); color: var(--accent); }
+  .tag-purple { background: var(--tag-purple-bg); color: var(--accent2); }
+  .tag-green { background: var(--tag-green-bg); color: var(--accent3); }
+  .tag-red { background: var(--tag-red-bg); color: var(--accent4); }
+  .tag-yellow { background: var(--tag-yellow-bg); color: var(--accent5); }
+
+  /* Section headers */
+  .section-header { margin-bottom: 28px; }
+  .section-header h2 { font-size: 26px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 6px; }
+  .section-header p { font-size: 15px; color: var(--text2); max-width: 680px; }
+
+  /* Architecture Diagram */
+  .arch-diagram { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 32px; overflow-x: auto; }
+  .arch-layer { margin-bottom: 12px; display: flex; align-items: stretch; gap: 12px; min-width: 900px; }
+  .layer-label { writing-mode: vertical-rl; text-orientation: mixed; transform: rotate(180deg); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; padding: 12px 8px; border-radius: 8px; display: flex; align-items: center; justify-content: center; min-width: 38px; }
+  .layer-content { flex: 1; display: flex; gap: 10px; flex-wrap: wrap; }
+  .layer-box { flex: 1; min-width: 140px; padding: 14px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; text-align: center; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; position: relative; }
+  .layer-box:hover { transform: scale(1.03); box-shadow: var(--shadow-hover); }
+  .layer-box small { display: block; font-weight: 400; font-size: 11px; opacity: 0.7; margin-top: 4px; }
+
+  .l-channel { background: var(--layer-channel-bg); border: 1px solid var(--layer-channel-border); color: var(--accent); }
+  .l-channel .layer-label { background: var(--layer-channel-border); color: var(--accent); }
+  .l-api { background: var(--layer-api-bg); border: 1px solid var(--layer-api-border); color: var(--accent2); }
+  .l-api .layer-label { background: var(--layer-api-border); color: var(--accent2); }
+  .l-core { background: var(--layer-core-bg); border: 1px solid var(--layer-core-border); color: var(--accent3); }
+  .l-core .layer-label { background: var(--layer-core-border); color: var(--accent3); }
+  .l-ai { background: var(--layer-ai-bg); border: 1px solid var(--layer-ai-border); color: var(--accent5); }
+  .l-ai .layer-label { background: var(--layer-ai-border); color: var(--accent5); }
+  .l-data { background: var(--layer-data-bg); border: 1px solid var(--layer-data-border); color: var(--accent4); }
+  .l-data .layer-label { background: var(--layer-data-border); color: var(--accent4); }
+  .l-infra { background: var(--layer-infra-bg); border: 1px solid var(--layer-infra-border); color: var(--text2); }
+  .l-infra .layer-label { background: var(--layer-infra-border); color: var(--text2); }
+
+  /* Connector lines */
+  .connector { text-align: center; padding: 4px 0; min-width: 900px; }
+  .connector span { display: inline-block; width: 2px; height: 18px; background: var(--border); border-radius: 1px; }
+  .connector-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; }
+
+  /* Integration Map */
+  .int-map { display: flex; gap: 24px; flex-wrap: wrap; margin-top: 24px; }
+  .int-vendor { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; flex: 1; min-width: 300px; }
+  .int-vendor h4 { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+  .int-vendor .subtitle { font-size: 12px; color: var(--text3); margin-bottom: 12px; }
+  .int-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .int-row:last-child { border-bottom: none; }
+  .int-proto { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 4px; }
+  .proto-rest { background: var(--tag-green-bg); color: var(--accent3); }
+  .proto-soap { background: var(--tag-yellow-bg); color: var(--accent5); }
+  .proto-file { background: var(--layer-infra-bg); color: var(--text2); }
+  .proto-event { background: var(--tag-purple-bg); color: var(--accent2); }
+  .proto-odata { background: var(--tag-blue-bg); color: var(--accent); }
+
+  /* Tooltip */
+  .tooltip { display: none; position: absolute; top: calc(100% + 8px); left: 50%; transform: translateX(-50%); background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 14px 18px; font-size: 12px; font-weight: 400; text-align: left; color: var(--text2); z-index: 50; min-width: 240px; box-shadow: var(--shadow-hover); line-height: 1.5; }
+  .layer-box:hover .tooltip { display: block; }
+  .tooltip.tooltip-up { top: auto; bottom: calc(100% + 8px); }
+  .tooltip strong { color: var(--text); display: block; margin-bottom: 4px; }
+
+  /* KPI row */
+  .kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 28px; }
+  .kpi { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; text-align: center; }
+  .kpi .value { font-size: 28px; font-weight: 800; background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .kpi .label { font-size: 12px; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; margin-top: 4px; }
+
+  /* Table */
+  .data-table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 13px; }
+  .data-table th { text-align: left; padding: 12px 16px; background: var(--surface2); color: var(--text2); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--border); }
+  .data-table td { padding: 12px 16px; border-bottom: 1px solid var(--border); }
+  .data-table tr:hover td { background: var(--table-hover); }
+
+  /* Compliance matrix */
+  .compliance-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin-top: 20px; }
+  .compliance-item { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+  .compliance-item h4 { font-size: 14px; font-weight: 700; margin-bottom: 2px; }
+  .compliance-item .reg-id { font-size: 11px; color: var(--accent); font-weight: 600; margin-bottom: 8px; }
+  .compliance-item p { font-size: 13px; color: var(--text2); }
+  .compliance-item .impact { margin-top: 10px; font-size: 12px; padding: 6px 12px; border-radius: 6px; }
+  .impact-high { background: var(--tag-red-bg); color: var(--accent4); }
+  .impact-med { background: var(--tag-yellow-bg); color: var(--accent5); }
+
+  /* Timeline */
+  .timeline { margin-top: 24px; position: relative; padding-left: 32px; }
+  .timeline::before { content: ''; position: absolute; left: 12px; top: 0; bottom: 0; width: 2px; background: var(--border); }
+  .timeline-item { position: relative; margin-bottom: 28px; }
+  .timeline-item::before { content: ''; position: absolute; left: -26px; top: 4px; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--accent); background: var(--bg); }
+  .timeline-item.done::before { background: var(--accent3); border-color: var(--accent3); }
+  .timeline-item h4 { font-size: 15px; font-weight: 700; }
+  .timeline-item .phase { font-size: 11px; color: var(--accent); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+  .timeline-item p { font-size: 13px; color: var(--text2); margin-top: 4px; }
+
+  /* Decision record */
+  .adr { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; margin-bottom: 16px; }
+  .adr h4 { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+  .adr .status { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; padding: 2px 10px; border-radius: 4px; display: inline-block; margin-bottom: 10px; }
+  .status-accepted { background: var(--tag-green-bg); color: var(--accent3); }
+  .status-proposed { background: var(--tag-yellow-bg); color: var(--accent5); }
+  .adr p { font-size: 13px; color: var(--text2); margin-bottom: 6px; }
+  .adr .rationale { font-size: 12px; color: var(--text3); font-style: italic; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); }
+
+  /* Expandable */
+  details { margin-bottom: 8px; }
+  details summary { cursor: pointer; font-weight: 600; font-size: 14px; padding: 10px 0; color: var(--text); }
+  details summary:hover { color: var(--accent); }
+  details[open] summary { color: var(--accent); }
+  details .detail-content { padding: 8px 0 16px 16px; font-size: 13px; color: var(--text2); line-height: 1.7; }
+
+  /* Theme toggle */
+  .theme-toggle { display: flex; align-items: center; gap: 8px; background: var(--surface2); border: 1px solid var(--border); border-radius: 24px; padding: 6px 14px; cursor: pointer; font-size: 13px; font-weight: 600; color: var(--text2); transition: all 0.2s; }
+  .theme-toggle:hover { border-color: var(--accent); color: var(--text); }
+  .theme-toggle .icon { font-size: 16px; line-height: 1; }
+
+  /* Smooth transitions for themed elements */
+  .card, .adr, .compliance-item, .int-vendor, .kpi, .arch-diagram, .nav, .data-table th { transition: background 0.3s, border-color 0.3s, color 0.3s; }
+
+  /* Footer */
+  .footer { border-top: 1px solid var(--border); padding: 24px 0; margin-top: 48px; text-align: center; font-size: 12px; color: var(--text3); }
+
+  @media (max-width: 768px) {
+    .header-inner { flex-direction: column; gap: 12px; text-align: center; }
+    .header-meta { text-align: center; }
+    .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+    .arch-layer { flex-direction: column; min-width: auto; }
+    .layer-label { writing-mode: horizontal-tb; transform: none; }
+    .connector { min-width: auto; }
+    .main { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-inner">
+    <div class="logo">
+      <div class="logo-icon">AC</div>
+      <div class="logo-text">
+        <h1>AssetCloud</h1>
+        <span>Architecture Guide — Vehicle &amp; Fleet Finance</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:20px;">
+      <div class="header-meta">
+        <div><strong>Version:</strong> 1.0 — April 2026</div>
+        <div><strong>Cloud Strategy:</strong> Azure-first</div>
+        <div><strong>Classification:</strong> Confidential</div>
+      </div>
+      <button class="theme-toggle" onclick="toggleTheme()" title="Switch between light and dark mode">
+        <span class="icon" id="theme-icon">&#9788;</span>
+        <span id="theme-label">Light</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- NAVIGATION -->
+<div class="nav">
+  <div class="nav-inner">
+    <button class="nav-btn active" onclick="showSection('overview')">Overview</button>
+    <button class="nav-btn" onclick="showSection('architecture')">Architecture</button>
+    <button class="nav-btn" onclick="showSection('ai')">AI &amp; ML</button>
+    <button class="nav-btn" onclick="showSection('integrations')">ERP Integrations</button>
+    <button class="nav-btn" onclick="showSection('compliance')">Compliance &amp; Security</button>
+    <button class="nav-btn" onclick="showSection('decisions')">Key Decisions</button>
+    <button class="nav-btn" onclick="showSection('roadmap')">Delivery Roadmap</button>
+    <button class="nav-btn" onclick="showSection('stack')">Technology Stack</button>
+  </div>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="main">
+
+<!-- ========== OVERVIEW ========== -->
+<div id="overview" class="section active">
+  <div class="section-header">
+    <h2>Platform Overview</h2>
+    <p>AssetCloud is a cloud-native, AI-powered asset finance platform purpose-built for European banks and finance companies operating in the vehicle and fleet finance segment.</p>
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi"><div class="value">6</div><div class="label">ERP Integrations</div></div>
+    <div class="kpi"><div class="value">12</div><div class="label">AI/ML Models</div></div>
+    <div class="kpi"><div class="value">7</div><div class="label">Architecture Layers</div></div>
+    <div class="kpi"><div class="value">5</div><div class="label">Compliance Frameworks</div></div>
+  </div>
+
+  <div class="card-grid grid-3">
+    <div class="card">
+      <h3>&#9889; Vision</h3>
+      <p>Deliver a unified, intelligent fleet finance platform that replaces fragmented point solutions with a single pane of glass — from origination through remarketing — while integrating seamlessly with incumbent ERP systems.</p>
+      <span class="tag tag-blue">Cloud-Native</span>
+      <span class="tag tag-purple">AI-First</span>
+      <span class="tag tag-green">API-Led</span>
+    </div>
+    <div class="card">
+      <h3>&#127919; Target Market</h3>
+      <p>Mid-to-large European banks, captive finance arms of OEMs, independent leasing companies, and fleet management companies operating across EU/EEA jurisdictions.</p>
+      <span class="tag tag-yellow">EU / EEA</span>
+      <span class="tag tag-red">Regulated</span>
+    </div>
+    <div class="card">
+      <h3>&#128736;&#65039; Core Capabilities</h3>
+      <p>Vehicle origination &amp; underwriting, fleet lifecycle management, residual value intelligence, telematics-driven insights, IFRS 16 lease accounting, and end-of-term remarketing.</p>
+      <span class="tag tag-green">Full Lifecycle</span>
+      <span class="tag tag-purple">AI-Powered</span>
+    </div>
+  </div>
+
+  <div class="card-grid grid-2" style="margin-top:20px">
+    <div class="card">
+      <h3>&#128161; Design Principles</h3>
+      <details><summary>API-First &amp; Event-Driven</summary><div class="detail-content">Every capability exposed as a versioned REST API. Domain events published to Azure Event Grid for loose coupling between bounded contexts. ERP integrations consume the same public API surface.</div></details>
+      <details><summary>Multi-Tenant by Design</summary><div class="detail-content">Logical tenant isolation at data, compute, and network layers. Tenant-aware identity via Azure AD B2C with custom policies. Per-tenant encryption keys in Azure Key Vault (BYOK supported).</div></details>
+      <details><summary>Composable Microservices</summary><div class="detail-content">Domain-driven decomposition into bounded contexts (Origination, Fleet, Asset, Accounting, Remarketing). Each service owns its data and publishes domain events. No shared databases between services.</div></details>
+      <details><summary>Regulatory-Native</summary><div class="detail-content">GDPR, DORA, EBA guidelines, and IFRS 16 built into the platform from day one — not bolted on. Data residency controls, ICT resilience testing hooks, and audit trails are first-class concerns.</div></details>
+    </div>
+    <div class="card">
+      <h3>&#128202; Key Differentiators</h3>
+      <details><summary>AI-Powered Residual Value Engine</summary><div class="detail-content">Combines historical transaction data, real-time telematics (mileage, condition scores), and market comparable feeds to predict residual values with high accuracy — reducing end-of-term write-offs.</div></details>
+      <details><summary>Universal ERP Integration Hub</summary><div class="detail-content">Pre-built adapters for Alfa Systems, Solifi/LeasePak, Linedata Ekip, SAP S/4HANA, FIS, and Sofico Miles. Adapter SDK enables custom connectors. Canonical data model abstracts vendor differences.</div></details>
+      <details><summary>Telematics Intelligence Layer</summary><div class="detail-content">IoT ingestion pipeline for OBD-II, CAN bus, and OEM telematics APIs. Powers predictive maintenance, driver behaviour scoring, fleet utilisation analytics, and insurance risk models.</div></details>
+      <details><summary>Embedded Compliance Engine</summary><div class="detail-content">Automated DORA ICT risk assessments, GDPR data subject request workflows, EBA outsourcing register generation, and continuous compliance monitoring with Azure Policy and Defender for Cloud.</div></details>
+    </div>
+  </div>
+</div>
+
+<!-- ========== ARCHITECTURE ========== -->
+<div id="architecture" class="section">
+  <div class="section-header">
+    <h2>Solution Architecture</h2>
+    <p>Seven-layer architecture following Azure Financial Services Landing Zone patterns. Hover over components for details.</p>
+  </div>
+
+  <div class="arch-diagram">
+    <!-- Layer 1: Channels -->
+    <div class="arch-layer">
+      <div class="layer-label l-channel">Channels</div>
+      <div class="layer-content">
+        <div class="layer-box l-channel">Dealer Portal<small>React SPA</small>
+          <div class="tooltip"><strong>Dealer / Vendor Portal</strong>Point-of-sale finance origination for vehicle dealers. Quote engine, credit application submission, document upload, and deal tracking. Built as React SPA hosted on Azure Static Web Apps.</div>
+        </div>
+        <div class="layer-box l-channel">Fleet Manager Portal<small>React SPA</small>
+          <div class="tooltip"><strong>Fleet Manager Portal</strong>Fleet operators manage their vehicle portfolio: orders, in-service tracking, maintenance scheduling, driver assignment, telematics dashboards, and de-fleet workflows.</div>
+        </div>
+        <div class="layer-box l-channel">Bank Back-Office<small>React SPA</small>
+          <div class="tooltip"><strong>Bank Back-Office UI</strong>Internal users handle underwriting, credit decisions, portfolio management, compliance reviews, and reporting. Role-based access with Azure AD integration.</div>
+        </div>
+        <div class="layer-box l-channel">Mobile App<small>React Native</small>
+          <div class="tooltip"><strong>Mobile Application</strong>Driver-facing app for fleet drivers: vehicle check-in/out, damage reporting, mileage logging, service booking, and roadside assistance. React Native for iOS/Android.</div>
+        </div>
+        <div class="layer-box l-channel">Open Banking API<small>PSD2 / Berlin Group</small>
+          <div class="tooltip"><strong>Open Banking API</strong>PSD2-compliant APIs enabling third-party access to account information and payment initiation. Berlin Group NextGenPSD2 standard for EU interoperability.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="connector"><span></span><br><span class="connector-label">Azure Front Door + WAF &#8594; Azure API Management</span></div>
+
+    <!-- Layer 2: API Gateway -->
+    <div class="arch-layer">
+      <div class="layer-label l-api">API Gateway</div>
+      <div class="layer-content">
+        <div class="layer-box l-api">Azure API Management<small>Gateway + Developer Portal</small>
+          <div class="tooltip"><strong>API Management</strong>Centralised API gateway: rate limiting, OAuth 2.0 / mTLS authentication, request transformation, API versioning, usage analytics, and developer portal for ERP vendor onboarding.</div>
+        </div>
+        <div class="layer-box l-api">Azure Front Door<small>Global Load Balancer + WAF</small>
+          <div class="tooltip"><strong>Azure Front Door</strong>Global entry point with Web Application Firewall (WAF), DDoS protection, SSL offloading, geo-routing for EU data residency, and health-probe-based failover.</div>
+        </div>
+        <div class="layer-box l-api">Azure AD B2C<small>Identity Platform</small>
+          <div class="tooltip"><strong>Identity &amp; Access</strong>Multi-tenant identity: bank employees via Azure AD federation, dealers via B2C custom policies, fleet drivers via social/email sign-up. MFA enforced for privileged operations. RBAC with custom claim enrichment.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="connector"><span></span><br><span class="connector-label">REST / gRPC &#8594; Service Mesh (Dapr on AKS)</span></div>
+
+    <!-- Layer 3: Core Domain Services -->
+    <div class="arch-layer">
+      <div class="layer-label l-core">Core Services</div>
+      <div class="layer-content">
+        <div class="layer-box l-core">Origination<small>Quote &amp; Credit</small>
+          <div class="tooltip"><strong>Origination Service</strong>Handles vehicle finance quotes, credit applications, automated credit scoring (calls AI layer), document collection, approval workflows, and contract generation. Event-sourced for full audit trail.</div>
+        </div>
+        <div class="layer-box l-core">Fleet Lifecycle<small>In-Service Mgmt</small>
+          <div class="tooltip"><strong>Fleet Lifecycle Service</strong>Vehicle ordering, registration, driver assignment, maintenance scheduling, fuel card management, insurance tracking, and mid-term modifications. Integrates with OEM ordering APIs.</div>
+        </div>
+        <div class="layer-box l-core">Asset &amp; Residual<small>Valuation Engine</small>
+          <div class="tooltip"><strong>Asset &amp; Residual Value Service</strong>Tracks physical asset state, manages residual value curves, triggers revaluation events based on telematics and market data. Feeds IFRS 16 right-of-use calculations.</div>
+        </div>
+        <div class="layer-box l-core">Accounting<small>IFRS 16 / Multi-GAAP</small>
+          <div class="tooltip"><strong>Lease Accounting Service</strong>IFRS 16 and multi-GAAP lease accounting engine. Calculates right-of-use assets, lease liabilities, depreciation schedules, and generates GL postings to ERP systems via the Integration Hub.</div>
+        </div>
+        <div class="layer-box l-core">Remarketing<small>De-fleet &amp; Disposal</small>
+          <div class="tooltip"><strong>Remarketing Service</strong>End-of-term workflows: vehicle inspection, damage assessment, auction channel selection, wholesale/retail pricing, buyer management, and settlement processing.</div>
+        </div>
+        <div class="layer-box l-core">Payments<small>Collections &amp; Billing</small>
+          <div class="tooltip"><strong>Payments Service</strong>Lease rental billing, direct debit orchestration (SEPA), payment matching, arrears management, early settlement calculations, and VAT handling across EU jurisdictions.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="connector"><span></span><br><span class="connector-label">Domain Events &#8594; Azure Event Grid + Service Bus</span></div>
+
+    <!-- Layer 4: AI & ML -->
+    <div class="arch-layer">
+      <div class="layer-label l-ai">AI / ML</div>
+      <div class="layer-content">
+        <div class="layer-box l-ai">Credit Scoring<small>Azure ML</small>
+          <div class="tooltip"><strong>AI Credit Scoring</strong>LightGBM/XGBoost models trained on historical portfolio data. Features: payment behaviour, bureau data, employment stability, vehicle-to-income ratio. Achieves 88-90% accuracy with explainability via SHAP.</div>
+        </div>
+        <div class="layer-box l-ai">Residual Value AI<small>Azure ML</small>
+          <div class="tooltip"><strong>Residual Value Prediction</strong>Ensemble model combining historical auction results, telematics-derived condition scores, mileage projections, market indices, and macroeconomic indicators. Refreshed monthly.</div>
+        </div>
+        <div class="layer-box l-ai">Document AI<small>Azure AI Document Intelligence</small>
+          <div class="tooltip"><strong>Intelligent Document Processing</strong>OCR + NLP pipeline for lease contracts, vehicle registration docs, proof of income, and insurance certificates. Extracts key fields, validates completeness, and routes exceptions. Uses Azure AI Document Intelligence with custom models.</div>
+        </div>
+        <div class="layer-box l-ai">Fraud Detection<small>Azure ML + Streaming</small>
+          <div class="tooltip"><strong>Fraud Detection Engine</strong>Real-time anomaly detection on application and transaction streams. Deep learning models flag suspicious patterns: identity fraud, income misrepresentation, ghost assets, and duplicate applications.</div>
+        </div>
+        <div class="layer-box l-ai">Fleet Optimisation<small>Azure OpenAI + ML</small>
+          <div class="tooltip"><strong>Fleet Optimisation AI</strong>Predictive maintenance from telematics, optimal replacement timing, TCO modelling, route/fuel optimisation, and natural-language fleet insights via Azure OpenAI GPT-4o integration.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="connector"><span></span><br><span class="connector-label">Feature Store + Model Registry &#8594; Azure ML Workspace</span></div>
+
+    <!-- Layer 5: Integration Hub -->
+    <div class="arch-layer">
+      <div class="layer-label l-data" style="font-size:10px">Integration</div>
+      <div class="layer-content">
+        <div class="layer-box l-data">ERP Adapter Framework<small>Canonical Data Model</small>
+          <div class="tooltip tooltip-up"><strong>ERP Integration Hub</strong>Adapter pattern: each ERP vendor has a dedicated adapter translating between the AssetCloud canonical data model and vendor-specific formats (REST, SOAP, file). Managed via Azure Integration Services (Logic Apps + Service Bus).</div>
+        </div>
+        <div class="layer-box l-data">Telematics Gateway<small>IoT Hub</small>
+          <div class="tooltip tooltip-up"><strong>Telematics IoT Gateway</strong>Azure IoT Hub ingests vehicle telemetry from OBD-II dongles, embedded OEM systems, and third-party telematics providers (Geotab, Webfleet, etc.). Protocol translation (MQTT, AMQP, HTTPS) and device provisioning.</div>
+        </div>
+        <div class="layer-box l-data">Market Data Feeds<small>Pricing &amp; Indices</small>
+          <div class="tooltip tooltip-up"><strong>Market Data Integration</strong>Real-time feeds from vehicle pricing providers (AutoVistaGroup/Eurotax, DAT, CAP HPI), auction platforms (BCA, Autorola), and economic indicators. Powers residual value and remarketing models.</div>
+        </div>
+        <div class="layer-box l-data">Banking Core<small>CBS / Payment Rails</small>
+          <div class="tooltip tooltip-up"><strong>Core Banking Integration</strong>Connects to bank core systems for customer master data, account creation, SEPA payment execution, GL posting, and regulatory reporting feeds. Supports ISO 20022 messaging.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="connector" style="padding:20px 0"><span></span><br><span class="connector-label">Persistence &amp; Analytics</span></div>
+
+    <!-- Layer 6: Data Platform -->
+    <div class="arch-layer">
+      <div class="layer-label l-infra" style="font-size:10px">Data</div>
+      <div class="layer-content">
+        <div class="layer-box l-infra">Azure SQL<small>Transactional (OLTP)</small>
+          <div class="tooltip tooltip-up"><strong>Azure SQL Database</strong>Hyperscale tier for transactional workloads. Per-service databases (database-per-service pattern). TDE encryption, geo-replication for DR, and row-level security for tenant isolation.</div>
+        </div>
+        <div class="layer-box l-infra">Cosmos DB<small>Event Store / NoSQL</small>
+          <div class="tooltip tooltip-up"><strong>Azure Cosmos DB</strong>Event store for event-sourced services (Origination, Payments). Also used for telematics time-series with TTL policies. Multi-region writes for low-latency reads across EU.</div>
+        </div>
+        <div class="layer-box l-infra">Azure Synapse<small>Analytics / DWH</small>
+          <div class="tooltip tooltip-up"><strong>Azure Synapse Analytics</strong>Enterprise data warehouse for portfolio analytics, regulatory reporting (COREP, FINREP), management dashboards, and AI/ML feature engineering. Serverless SQL pools for ad-hoc analysis.</div>
+        </div>
+        <div class="layer-box l-infra">Azure Data Lake<small>Gen2 / Raw Zone</small>
+          <div class="tooltip tooltip-up"><strong>Azure Data Lake Storage Gen2</strong>Raw, curated, and consumption data zones. Stores telematics streams, document images, market data history, and ML training datasets. Hierarchical namespace with ABAC.</div>
+        </div>
+        <div class="layer-box l-infra">Redis Cache<small>Session / Hotpath</small>
+          <div class="tooltip tooltip-up"><strong>Azure Cache for Redis</strong>Session state, API response caching, rate-limit counters, and hot-path data (e.g., live fleet positions, active quote sessions). Enterprise tier with Active-Active geo.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="connector" style="padding:20px 0"><span></span></div>
+
+    <!-- Layer 7: Infrastructure -->
+    <div class="arch-layer">
+      <div class="layer-label l-infra" style="font-size:10px">Platform</div>
+      <div class="layer-content">
+        <div class="layer-box l-infra">AKS<small>Container Orchestration</small>
+          <div class="tooltip tooltip-up"><strong>Azure Kubernetes Service</strong>Microservices runtime on AKS with Dapr sidecar for service discovery, pub/sub, and state management. Cluster per environment; KEDA for event-driven auto-scaling.</div>
+        </div>
+        <div class="layer-box l-infra">Terraform / Bicep<small>Infrastructure as Code</small>
+          <div class="tooltip tooltip-up"><strong>IaC &amp; GitOps</strong>All infrastructure defined in Terraform (multi-cloud portability) with Bicep modules for Azure-specific resources. GitOps via Flux CD on AKS. Drift detection and compliance scanning.</div>
+        </div>
+        <div class="layer-box l-infra">Azure Monitor<small>Observability Stack</small>
+          <div class="tooltip tooltip-up"><strong>Observability</strong>Application Insights for APM, Log Analytics workspace for centralised logging, Azure Monitor alerts, and Grafana dashboards. Distributed tracing with OpenTelemetry. SLA/SLO tracking.</div>
+        </div>
+        <div class="layer-box l-infra">Defender for Cloud<small>Security Posture</small>
+          <div class="tooltip tooltip-up"><strong>Security &amp; Compliance</strong>Microsoft Defender for Cloud: CSPM, workload protection, regulatory compliance dashboards (DORA, GDPR), and Sentinel SIEM for threat detection. Confidential Computing for sensitive workloads.</div>
+        </div>
+        <div class="layer-box l-infra">Azure DevOps<small>CI/CD Pipelines</small>
+          <div class="tooltip tooltip-up"><strong>CI/CD &amp; DevSecOps</strong>Azure DevOps Pipelines with shift-left security: SAST (SonarQube), DAST, container scanning (Trivy), dependency audit, and automated deployment gates with approval workflows.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== AI & ML ========== -->
+<div id="ai" class="section">
+  <div class="section-header">
+    <h2>AI &amp; Machine Learning Capabilities</h2>
+    <p>Twelve AI/ML models spanning the full fleet finance lifecycle, powered by Azure Machine Learning and Azure OpenAI Service.</p>
+  </div>
+
+  <div class="card-grid grid-3">
+    <div class="card">
+      <h3>&#129504; Credit Scoring</h3>
+      <p>Gradient-boosted ensemble (LightGBM) trained on historical portfolio performance. Features include payment behaviour, bureau data, employment stability, and vehicle-to-income ratio. SHAP-based explainability for regulatory transparency.</p>
+      <span class="tag tag-blue">Azure ML</span><span class="tag tag-green">88-90% Accuracy</span>
+    </div>
+    <div class="card">
+      <h3>&#128176; Residual Value Prediction</h3>
+      <p>Multi-input ensemble combining auction history, telematics condition scores, mileage curves, market indices (Eurotax/DAT), and macroeconomic signals. Monthly retraining with champion-challenger deployment.</p>
+      <span class="tag tag-blue">Azure ML</span><span class="tag tag-yellow">Monthly Retrain</span>
+    </div>
+    <div class="card">
+      <h3>&#128196; Document Intelligence</h3>
+      <p>OCR + NLP pipeline for lease contracts, vehicle registration, proof of income, and insurance certificates. Custom-trained extraction models with human-in-the-loop validation for edge cases.</p>
+      <span class="tag tag-purple">Document Intelligence</span><span class="tag tag-green">Custom Models</span>
+    </div>
+    <div class="card">
+      <h3>&#128681; Fraud Detection</h3>
+      <p>Real-time anomaly detection on application and transaction streams. Graph neural network identifies connected fraud rings. Adaptive models reduce false positives while catching identity fraud and ghost assets.</p>
+      <span class="tag tag-red">Real-Time</span><span class="tag tag-blue">Deep Learning</span>
+    </div>
+    <div class="card">
+      <h3>&#128663; Predictive Maintenance</h3>
+      <p>Telematics-fed models predict component failure probability. Integrates with fleet lifecycle service to auto-schedule maintenance, reducing downtime and extending asset residual value.</p>
+      <span class="tag tag-yellow">IoT Hub</span><span class="tag tag-green">Proactive</span>
+    </div>
+    <div class="card">
+      <h3>&#128200; Fleet Optimisation</h3>
+      <p>Total Cost of Ownership (TCO) modelling, optimal replacement timing, fleet right-sizing recommendations, and fuel/route efficiency analysis using vehicle telematics and operational data.</p>
+      <span class="tag tag-blue">Azure ML</span><span class="tag tag-purple">Optimisation</span>
+    </div>
+    <div class="card">
+      <h3>&#9889; Automated Underwriting</h3>
+      <p>Rules engine + ML hybrid: straight-through processing for low-risk applications, AI-assisted decisioning for mid-range, and human escalation for complex cases. Reduces cycle time from days to minutes.</p>
+      <span class="tag tag-green">STP</span><span class="tag tag-blue">Hybrid AI+Rules</span>
+    </div>
+    <div class="card">
+      <h3>&#128172; Conversational AI</h3>
+      <p>Azure OpenAI GPT-4o powers natural-language fleet insights ("Show me vehicles due for replacement in Q3"), dealer chatbot for quote queries, and driver mobile app support assistant.</p>
+      <span class="tag tag-purple">Azure OpenAI</span><span class="tag tag-yellow">GPT-4o</span>
+    </div>
+    <div class="card">
+      <h3>&#128202; Portfolio Analytics</h3>
+      <p>Concentration risk analysis, vintage curve generation, loss-given-default modelling, and early warning indicators for portfolio deterioration. Feeds regulatory reporting (COREP/FINREP).</p>
+      <span class="tag tag-blue">Synapse</span><span class="tag tag-red">Risk Models</span>
+    </div>
+    <div class="card">
+      <h3>&#128663; Driver Behaviour Scoring</h3>
+      <p>Telematics-derived risk scores: harsh braking, acceleration, cornering, speeding, and distracted driving. Feeds insurance premium adjustments and fleet safety programs.</p>
+      <span class="tag tag-yellow">IoT</span><span class="tag tag-green">Insurance</span>
+    </div>
+    <div class="card">
+      <h3>&#128269; Smart Remarketing</h3>
+      <p>Channel optimisation for end-of-term vehicles: predicts best channel (auction, wholesale, retail) and optimal timing based on market conditions, vehicle profile, and historical recovery rates.</p>
+      <span class="tag tag-purple">ML</span><span class="tag tag-blue">Channel Routing</span>
+    </div>
+    <div class="card">
+      <h3>&#128203; Regulatory Reporting AI</h3>
+      <p>Automated extraction and classification of data for COREP, FINREP, and national regulatory templates. NLP-based change detection for evolving regulatory requirements. Reduces manual reporting effort.</p>
+      <span class="tag tag-red">Compliance</span><span class="tag tag-green">Automated</span>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:24px">
+    <h3>&#128736;&#65039; MLOps Architecture</h3>
+    <p style="margin-bottom:12px">All models follow a standardised MLOps lifecycle on Azure Machine Learning:</p>
+    <table class="data-table">
+      <thead><tr><th>Stage</th><th>Tooling</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>Feature Engineering</td><td>Azure Synapse + Feature Store</td><td>Centralised feature store ensures consistent features across training and inference. Point-in-time correctness for financial data.</td></tr>
+        <tr><td>Training</td><td>Azure ML Compute Clusters</td><td>GPU clusters for deep learning, CPU for gradient-boosted models. Hyperparameter tuning via Bayesian optimisation.</td></tr>
+        <tr><td>Validation</td><td>Responsible AI Dashboard</td><td>Fairness assessment, error analysis, model interpretability (SHAP/LIME), and data drift detection before promotion.</td></tr>
+        <tr><td>Deployment</td><td>AKS Managed Endpoints</td><td>Champion-challenger pattern with canary rollouts. A/B testing for model versions. Real-time and batch inference endpoints.</td></tr>
+        <tr><td>Monitoring</td><td>Azure Monitor + ML Studio</td><td>Data drift detection, prediction distribution monitoring, latency/throughput SLOs, and automated retraining triggers.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ========== INTEGRATIONS ========== -->
+<div id="integrations" class="section">
+  <div class="section-header">
+    <h2>ERP Integration Hub</h2>
+    <p>Adapter-based integration framework with a canonical data model that abstracts vendor-specific differences. Each adapter translates between the AssetCloud domain model and the ERP's native interface.</p>
+  </div>
+
+  <div class="card" style="margin-bottom:24px">
+    <h3>&#128268; Integration Architecture Pattern</h3>
+    <p>The hub uses a <strong>Canonical Data Model + Adapter</strong> pattern. Core services speak only the canonical model. Each ERP adapter handles protocol translation (REST, SOAP, file), data mapping, error handling, and retry logic. Adapters run as isolated Azure Functions behind the Integration Service Bus, ensuring one vendor's issues do not cascade.</p>
+    <div style="margin-top:12px">
+      <span class="tag tag-blue">Azure Logic Apps</span>
+      <span class="tag tag-purple">Azure Service Bus</span>
+      <span class="tag tag-green">Azure Functions</span>
+      <span class="tag tag-yellow">Adapter SDK</span>
+    </div>
+  </div>
+
+  <div class="int-map">
+    <div class="int-vendor">
+      <h4>Alfa Systems</h4>
+      <div class="subtitle">Premium auto/equipment finance &#8212; Deep lifecycle coverage</div>
+      <div class="int-row"><span>Contract Management</span><span class="int-proto proto-rest">REST</span></div>
+      <div class="int-row"><span>Billing &amp; Payments</span><span class="int-proto proto-file">File</span></div>
+      <div class="int-row"><span>Asset Register</span><span class="int-proto proto-rest">REST</span></div>
+      <div class="int-row"><span>GL Postings</span><span class="int-proto proto-file">XML File</span></div>
+      <div class="int-row"><span>Customer Master</span><span class="int-proto proto-soap">SOAP</span></div>
+    </div>
+    <div class="int-vendor">
+      <h4>Solifi (LeasePak / Leasepath)</h4>
+      <div class="subtitle">Cloud-native SaaS &#8212; Microsoft Dynamics foundation</div>
+      <div class="int-row"><span>Origination API</span><span class="int-proto proto-rest">REST</span></div>
+      <div class="int-row"><span>Portfolio Queries</span><span class="int-proto proto-rest">REST</span></div>
+      <div class="int-row"><span>Accounting Events</span><span class="int-proto proto-event">Event</span></div>
+      <div class="int-row"><span>Data Streaming</span><span class="int-proto proto-rest">REST</span></div>
+      <div class="int-row"><span>Power Platform</span><span class="int-proto proto-rest">Dataverse</span></div>
+    </div>
+    <div class="int-vendor">
+      <h4>SAP S/4HANA &amp; SAP Leasing</h4>
+      <div class="subtitle">Enterprise ERP &#8212; Broad GL and finance integration</div>
+      <div class="int-row"><span>Business Partner</span><span class="int-proto proto-odata">OData</span></div>
+      <div class="int-row"><span>Lease Contracts</span><span class="int-proto proto-odata">OData</span></div>
+      <div class="int-row"><span>FI/CO Postings</span><span class="int-proto proto-file">IDoc/RFC</span></div>
+      <div class="int-row"><span>IFRS 16 Module</span><span class="int-proto proto-odata">OData</span></div>
+      <div class="int-row"><span>Event Mesh</span><span class="int-proto proto-event">Event</span></div>
+    </div>
+  </div>
+
+  <div class="int-map" style="margin-top:16px">
+    <div class="int-vendor">
+      <h4>Linedata Ekip</h4>
+      <div class="subtitle">European specialist &#8212; IFRS 16 focused</div>
+      <div class="int-row"><span>Lease Accounting</span><span class="int-proto proto-soap">SOAP</span></div>
+      <div class="int-row"><span>Portfolio Data</span><span class="int-proto proto-file">File</span></div>
+      <div class="int-row"><span>GL Interface</span><span class="int-proto proto-file">XML File</span></div>
+      <div class="int-row"><span>Customer Data</span><span class="int-proto proto-soap">SOAP</span></div>
+    </div>
+    <div class="int-vendor">
+      <h4>FIS Global</h4>
+      <div class="subtitle">Global vendor &#8212; API-first modern architecture</div>
+      <div class="int-row"><span>Origination API</span><span class="int-proto proto-rest">REST</span></div>
+      <div class="int-row"><span>Servicing API</span><span class="int-proto proto-rest">REST</span></div>
+      <div class="int-row"><span>Accounting</span><span class="int-proto proto-rest">REST</span></div>
+      <div class="int-row"><span>Webhooks</span><span class="int-proto proto-event">Event</span></div>
+    </div>
+    <div class="int-vendor">
+      <h4>Sofico Miles</h4>
+      <div class="subtitle">Belgian specialist &#8212; Fleet &amp; mobility</div>
+      <div class="int-row"><span>Fleet Management</span><span class="int-proto proto-rest">REST</span></div>
+      <div class="int-row"><span>Driver Portal</span><span class="int-proto proto-rest">REST</span></div>
+      <div class="int-row"><span>Invoicing</span><span class="int-proto proto-file">File</span></div>
+      <div class="int-row"><span>Reporting</span><span class="int-proto proto-file">XML File</span></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:24px">
+    <h3>&#128295; Adapter SDK &amp; Onboarding</h3>
+    <p>The open Adapter SDK enables system integrators and ERP vendors to build custom connectors. Each adapter implements a standard interface: <code>IAssetFinanceAdapter</code> with methods for contract sync, payment processing, GL posting, and customer data exchange. The SDK includes a test harness, canonical model validators, and a sandbox environment.</p>
+    <details><summary>Canonical Data Model — Key Entities</summary>
+      <div class="detail-content">
+        <strong>Contract:</strong> LeaseAgreement, FinanceAgreement, HirePurchase — unified contract representation with terms, schedules, and parties.<br>
+        <strong>Asset:</strong> Vehicle entity with VIN, make/model, registration, condition, telematics ID, and valuation history.<br>
+        <strong>Party:</strong> Unified customer/dealer/OEM model with KYC status, credit grade, and relationship hierarchy.<br>
+        <strong>Financial:</strong> GL transaction, invoice, payment, and settlement events following ISO 20022 semantics.<br>
+        <strong>Fleet:</strong> Fleet, driver, assignment, maintenance event, and telematics reading entities.
+      </div>
+    </details>
+  </div>
+</div>
+
+<!-- ========== COMPLIANCE ========== -->
+<div id="compliance" class="section">
+  <div class="section-header">
+    <h2>Compliance &amp; Security Architecture</h2>
+    <p>Regulatory compliance is embedded at every layer — not bolted on. The platform addresses DORA, GDPR, EBA guidelines, IFRS 16, and national regulatory requirements across EU member states.</p>
+  </div>
+
+  <div class="compliance-grid">
+    <div class="compliance-item">
+      <h4>Digital Operational Resilience Act (DORA)</h4>
+      <div class="reg-id">Regulation (EU) 2022/2554 — Effective January 2025</div>
+      <p>ICT risk management framework, incident reporting, resilience testing, and third-party risk management. AssetCloud implements automated ICT risk assessments, disaster recovery testing (Azure Site Recovery), and a machine-readable third-party risk register.</p>
+      <div class="impact impact-high">HIGH IMPACT — Core architectural driver</div>
+    </div>
+    <div class="compliance-item">
+      <h4>General Data Protection Regulation (GDPR)</h4>
+      <div class="reg-id">Regulation (EU) 2016/679</div>
+      <p>Data subject rights automation (access, erasure, portability), consent management, data retention policies with automated purge, and privacy-by-design. Data residency enforced at Azure region level (West Europe / North Europe).</p>
+      <div class="impact impact-high">HIGH IMPACT — Data architecture driver</div>
+    </div>
+    <div class="compliance-item">
+      <h4>EBA Outsourcing Guidelines</h4>
+      <div class="reg-id">EBA/GL/2019/02</div>
+      <p>Cloud outsourcing risk assessment, exit strategy documentation, audit access provisions, and sub-outsourcing chain transparency. AssetCloud maintains an outsourcing register with Azure service dependency mapping.</p>
+      <div class="impact impact-med">MEDIUM IMPACT — Operational governance</div>
+    </div>
+    <div class="compliance-item">
+      <h4>IFRS 16 — Leases</h4>
+      <div class="reg-id">International Financial Reporting Standard 16</div>
+      <p>Right-of-use asset and lease liability recognition, modification accounting, variable lease payment handling, and disclosure generation. Multi-GAAP support for institutions reporting under both IFRS and local GAAP.</p>
+      <div class="impact impact-high">HIGH IMPACT — Accounting engine design</div>
+    </div>
+    <div class="compliance-item">
+      <h4>PSD2 / Open Banking</h4>
+      <div class="reg-id">Directive (EU) 2015/2366</div>
+      <p>Strong Customer Authentication (SCA) for payment initiation, account information APIs following Berlin Group NextGenPSD2, and TPP registration validation.</p>
+      <div class="impact impact-med">MEDIUM IMPACT — Payment flows</div>
+    </div>
+    <div class="compliance-item">
+      <h4>EU AI Act</h4>
+      <div class="reg-id">Regulation (EU) 2024/1689</div>
+      <p>Credit scoring classified as high-risk AI system. Requires: risk management system, data governance, transparency documentation, human oversight, and conformity assessment. AssetCloud implements model cards, SHAP explainability, and fairness monitoring.</p>
+      <div class="impact impact-high">HIGH IMPACT — AI/ML architecture</div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:24px">
+    <h3>&#128274; Security Architecture</h3>
+    <table class="data-table">
+      <thead><tr><th>Layer</th><th>Controls</th><th>Azure Services</th></tr></thead>
+      <tbody>
+        <tr><td>Network</td><td>Private endpoints, NSGs, Azure Firewall, DDoS Protection Standard</td><td>Azure Virtual Network, Private Link</td></tr>
+        <tr><td>Identity</td><td>Zero-trust, conditional access, MFA, just-in-time admin</td><td>Azure AD, PIM, Conditional Access</td></tr>
+        <tr><td>Data</td><td>TDE at rest, TLS 1.3 in transit, BYOK, column-level encryption</td><td>Key Vault, Always Encrypted</td></tr>
+        <tr><td>Application</td><td>OWASP Top 10, WAF rules, API throttling, input validation</td><td>Front Door WAF, API Management</td></tr>
+        <tr><td>Secrets</td><td>Centralised secrets, rotation policies, HSM-backed keys</td><td>Key Vault (Premium / mHSM)</td></tr>
+        <tr><td>Monitoring</td><td>SIEM, threat detection, compliance dashboards, audit logs</td><td>Sentinel, Defender for Cloud</td></tr>
+        <tr><td>Compute</td><td>Confidential VMs for sensitive workloads, container image signing</td><td>Confidential Computing, Notary</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ========== DECISIONS ========== -->
+<div id="decisions" class="section">
+  <div class="section-header">
+    <h2>Key Architecture Decisions</h2>
+    <p>Architecture Decision Records (ADRs) documenting the critical choices shaping AssetCloud.</p>
+  </div>
+
+  <div class="adr">
+    <h4>ADR-001: Azure Kubernetes Service as Primary Compute Runtime</h4>
+    <div class="status status-accepted">Accepted</div>
+    <p><strong>Context:</strong> Need a container orchestration platform that supports microservices, event-driven scaling, service mesh, and multi-region deployment while aligning with Azure-first strategy.</p>
+    <p><strong>Decision:</strong> AKS with Dapr sidecar for service invocation, pub/sub, and state management. KEDA for event-driven auto-scaling. Flux CD for GitOps-based deployments.</p>
+    <div class="rationale"><strong>Rationale:</strong> AKS provides the deepest Azure integration (AAD pod identity, Key Vault CSI, Azure Monitor) while maintaining Kubernetes portability. Dapr abstracts infrastructure concerns, making it feasible to run on other Kubernetes distributions if cloud strategy evolves. Considered Azure Container Apps but it lacks the fine-grained control needed for financial services workload isolation and compliance.</div>
+  </div>
+
+  <div class="adr">
+    <h4>ADR-002: Canonical Data Model for ERP Integration</h4>
+    <div class="status status-accepted">Accepted</div>
+    <p><strong>Context:</strong> Must integrate with 6+ ERP vendors, each with different data models, protocols, and semantics. Direct point-to-point integration creates O(n²) complexity.</p>
+    <p><strong>Decision:</strong> Define a canonical data model (CDM) for AssetCloud domain entities. Each ERP adapter maps to/from the CDM. Core services only interact with the CDM.</p>
+    <div class="rationale"><strong>Rationale:</strong> Reduces integration complexity from O(n²) to O(n). Adding a new ERP vendor requires only one adapter, not changes across all consuming services. Trade-off: the CDM must be expressive enough to cover all vendor capabilities without becoming a lowest-common-denominator. Mitigated by extension points in the CDM schema and vendor-specific metadata bags.</div>
+  </div>
+
+  <div class="adr">
+    <h4>ADR-003: Event Sourcing for Origination &amp; Payments</h4>
+    <div class="status status-accepted">Accepted</div>
+    <p><strong>Context:</strong> Audit trail requirements for financial transactions are strict (DORA, EBA). Need immutable record of every state change with ability to reconstruct state at any point in time.</p>
+    <p><strong>Decision:</strong> Event-sourced architecture for Origination and Payments bounded contexts using Cosmos DB as the event store. CQRS pattern with dedicated read models in Azure SQL.</p>
+    <div class="rationale"><strong>Rationale:</strong> Event sourcing provides a complete, immutable audit trail by design — satisfying regulatory requirements without additional audit-logging infrastructure. CQRS enables optimised read models for different query patterns. Trade-off: increased complexity in event schema evolution and eventual consistency. Mitigated by schema registry and versioned event contracts.</div>
+  </div>
+
+  <div class="adr">
+    <h4>ADR-004: Multi-Tenant with Logical Isolation</h4>
+    <div class="status status-accepted">Accepted</div>
+    <p><strong>Context:</strong> Serving multiple banks/finance companies from a shared platform. Some customers may require stronger isolation guarantees.</p>
+    <p><strong>Decision:</strong> Default: logical multi-tenancy with row-level security, tenant-specific encryption keys, and network policies. Premium tier: dedicated AKS node pools and database instances per tenant.</p>
+    <div class="rationale"><strong>Rationale:</strong> Logical isolation is cost-efficient and operationally simpler for most customers. The premium tier satisfies banks with stricter regulatory interpretations or internal policies. Azure Key Vault BYOK ensures each tenant controls their own encryption keys even in the shared model.</div>
+  </div>
+
+  <div class="adr">
+    <h4>ADR-005: Azure OpenAI for Generative AI Capabilities</h4>
+    <div class="status status-accepted">Accepted</div>
+    <p><strong>Context:</strong> Need LLM capabilities for document understanding, conversational analytics, and natural-language fleet insights. Must satisfy EU data residency and AI Act requirements.</p>
+    <p><strong>Decision:</strong> Azure OpenAI Service (Sweden Central region) with GPT-4o for generative tasks. Data stays within EU. Supplemented by Azure AI Document Intelligence for structured extraction.</p>
+    <div class="rationale"><strong>Rationale:</strong> Azure OpenAI runs in EU data centres (Sweden Central), data is not used for model training, and enterprise security controls (private endpoints, managed identity) apply. The EU AI Act classifies credit scoring as high-risk — SHAP explainability and human oversight are built into the ML pipeline, not the LLM layer. LLMs handle advisory/conversational tasks that don't require the same conformity assessment.</div>
+  </div>
+
+  <div class="adr">
+    <h4>ADR-006: Terraform for Infrastructure as Code (with Bicep for Azure-Native Modules)</h4>
+    <div class="status status-proposed">Proposed</div>
+    <p><strong>Context:</strong> Azure-first but want to preserve portability option. Team has mixed Terraform/Bicep experience.</p>
+    <p><strong>Decision:</strong> Terraform as primary IaC with Azure Verified Modules. Bicep for Azure-specific complex resources (e.g., AKS cluster config, APIM policies) wrapped as Terraform modules.</p>
+    <div class="rationale"><strong>Rationale:</strong> Terraform provides multi-cloud portability and a mature state management model. Azure Verified Modules reduce custom code. Bicep handles the 20% of Azure resources where HCL is cumbersome. Trade-off: two IaC languages increase onboarding complexity. Mitigated by clear boundaries (Terraform for orchestration, Bicep for Azure modules).</div>
+  </div>
+</div>
+
+<!-- ========== ROADMAP ========== -->
+<div id="roadmap" class="section">
+  <div class="section-header">
+    <h2>Delivery Roadmap</h2>
+    <p>Phased delivery over 18 months, starting with core platform and origination, then expanding to fleet lifecycle and AI capabilities.</p>
+  </div>
+
+  <div class="timeline">
+    <div class="timeline-item">
+      <div class="phase">Phase 0 — Foundation (Months 1–3)</div>
+      <h4>Platform &amp; Infrastructure Bootstrap</h4>
+      <p>Azure Landing Zone deployment (FSI pattern), AKS clusters, CI/CD pipelines, observability stack, identity platform, and IaC framework. Security baseline and compliance posture established. Integration Hub skeleton with first adapter (Solifi) in sandbox.</p>
+    </div>
+    <div class="timeline-item">
+      <div class="phase">Phase 1 — Core Origination (Months 3–6)</div>
+      <h4>Vehicle Finance Origination MVP</h4>
+      <p>Dealer portal, quote engine, credit application workflow, automated credit scoring (v1), document collection (Document AI), approval workflow, and contract generation. Alfa Systems and SAP adapters in development. IFRS 16 accounting engine (basic).</p>
+    </div>
+    <div class="timeline-item">
+      <div class="phase">Phase 2 — Fleet Lifecycle (Months 6–10)</div>
+      <h4>In-Service Fleet Management</h4>
+      <p>Fleet manager portal, vehicle ordering, driver management, maintenance scheduling, telematics gateway (IoT Hub), and mobile driver app (v1). Predictive maintenance model (v1). Sofico Miles and FIS adapters. SEPA payment integration.</p>
+    </div>
+    <div class="timeline-item">
+      <div class="phase">Phase 3 — AI &amp; Analytics (Months 10–14)</div>
+      <h4>Advanced AI Capabilities &amp; Data Platform</h4>
+      <p>Residual value prediction model, fraud detection engine, fleet optimisation AI, conversational analytics (Azure OpenAI), portfolio analytics dashboard (Synapse), and regulatory reporting automation. Linedata Ekip adapter. Full MLOps pipeline.</p>
+    </div>
+    <div class="timeline-item">
+      <div class="phase">Phase 4 — Remarketing &amp; Scale (Months 14–18)</div>
+      <h4>End-of-Term &amp; Market Expansion</h4>
+      <p>Remarketing module (auction integration, channel optimisation AI), advanced driver behaviour scoring, insurance integration, Open Banking APIs (PSD2), multi-country rollout (DE, FR, NL, Nordics), and premium tenant isolation tier. Full compliance certification.</p>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:24px">
+    <h3>&#127919; Key Milestones</h3>
+    <table class="data-table">
+      <thead><tr><th>Milestone</th><th>Target</th><th>Dependencies</th></tr></thead>
+      <tbody>
+        <tr><td>Azure Landing Zone — Production Ready</td><td>Month 2</td><td>Azure Enterprise Agreement, network design sign-off</td></tr>
+        <tr><td>First Dealer Origination (Pilot)</td><td>Month 6</td><td>Solifi adapter complete, credit scoring v1 validated</td></tr>
+        <tr><td>Telematics Pipeline — Live Data</td><td>Month 8</td><td>IoT Hub provisioned, telematics provider contracts</td></tr>
+        <tr><td>DORA Compliance Assessment</td><td>Month 10</td><td>ICT risk framework, resilience testing complete</td></tr>
+        <tr><td>AI Model Portfolio — Production</td><td>Month 14</td><td>MLOps pipeline, responsible AI review, EU AI Act compliance</td></tr>
+        <tr><td>Multi-Country GA</td><td>Month 18</td><td>Localisation, national regulatory reviews, go-to-market</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ========== TECHNOLOGY STACK ========== -->
+<div id="stack" class="section">
+  <div class="section-header">
+    <h2>Technology Stack</h2>
+    <p>Full technology inventory organised by architectural layer.</p>
+  </div>
+
+  <div class="card-grid grid-2">
+    <div class="card">
+      <h3>Frontend</h3>
+      <table class="data-table">
+        <tr><td>Web Portals</td><td>React 19 + TypeScript</td></tr>
+        <tr><td>Mobile App</td><td>React Native</td></tr>
+        <tr><td>State Management</td><td>Zustand / TanStack Query</td></tr>
+        <tr><td>UI Components</td><td>Custom design system (Radix UI primitives)</td></tr>
+        <tr><td>Hosting</td><td>Azure Static Web Apps + CDN</td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <h3>Backend Services</h3>
+      <table class="data-table">
+        <tr><td>Language</td><td>C# (.NET 9) — primary; Python — AI/ML</td></tr>
+        <tr><td>API Framework</td><td>ASP.NET Core Minimal APIs</td></tr>
+        <tr><td>Service Mesh</td><td>Dapr on AKS</td></tr>
+        <tr><td>Messaging</td><td>Azure Service Bus + Event Grid</td></tr>
+        <tr><td>Workflow</td><td>Dapr Workflow / Durable Functions</td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <h3>Data &amp; Analytics</h3>
+      <table class="data-table">
+        <tr><td>OLTP</td><td>Azure SQL Hyperscale</td></tr>
+        <tr><td>Event Store</td><td>Azure Cosmos DB (NoSQL)</td></tr>
+        <tr><td>Data Warehouse</td><td>Azure Synapse Analytics</td></tr>
+        <tr><td>Data Lake</td><td>ADLS Gen2 (Delta Lake format)</td></tr>
+        <tr><td>Cache</td><td>Azure Cache for Redis (Enterprise)</td></tr>
+        <tr><td>Search</td><td>Azure AI Search</td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <h3>AI &amp; Machine Learning</h3>
+      <table class="data-table">
+        <tr><td>ML Platform</td><td>Azure Machine Learning</td></tr>
+        <tr><td>LLM / GenAI</td><td>Azure OpenAI Service (GPT-4o)</td></tr>
+        <tr><td>Document AI</td><td>Azure AI Document Intelligence</td></tr>
+        <tr><td>ML Frameworks</td><td>LightGBM, XGBoost, PyTorch, scikit-learn</td></tr>
+        <tr><td>Feature Store</td><td>Azure ML Feature Store</td></tr>
+        <tr><td>Responsible AI</td><td>Responsible AI Dashboard, SHAP, Fairlearn</td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <h3>Integration</h3>
+      <table class="data-table">
+        <tr><td>API Gateway</td><td>Azure API Management</td></tr>
+        <tr><td>Orchestration</td><td>Azure Logic Apps (Standard)</td></tr>
+        <tr><td>IoT</td><td>Azure IoT Hub</td></tr>
+        <tr><td>File Transfer</td><td>Azure Blob + SFTP endpoint</td></tr>
+        <tr><td>Message Format</td><td>ISO 20022 (payments), custom JSON (CDM)</td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <h3>DevOps &amp; Security</h3>
+      <table class="data-table">
+        <tr><td>CI/CD</td><td>Azure DevOps Pipelines</td></tr>
+        <tr><td>IaC</td><td>Terraform + Bicep</td></tr>
+        <tr><td>GitOps</td><td>Flux CD</td></tr>
+        <tr><td>Container Registry</td><td>Azure Container Registry</td></tr>
+        <tr><td>Secrets</td><td>Azure Key Vault (Premium)</td></tr>
+        <tr><td>SIEM</td><td>Microsoft Sentinel</td></tr>
+        <tr><td>SAST/DAST</td><td>SonarQube, Trivy, OWASP ZAP</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+</div><!-- /main -->
+
+<div class="footer">
+  <div style="max-width:1360px;margin:0 auto;padding:0 32px;">
+    AssetCloud Architecture Guide v1.0 &mdash; April 2026 &mdash; Confidential<br>
+    Vehicle &amp; Fleet Finance &bull; Azure-First &bull; AI-Powered &bull; European Market
+  </div>
+</div>
+
+<script>
+function showSection(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  event.target.classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function toggleTheme() {
+  var html = document.documentElement;
+  var current = html.getAttribute('data-theme');
+  var icon = document.getElementById('theme-icon');
+  var label = document.getElementById('theme-label');
+  if (current === 'light') {
+    html.removeAttribute('data-theme');
+    icon.innerHTML = '&#9788;';
+    label.textContent = 'Light';
+  } else {
+    html.setAttribute('data-theme', 'light');
+    icon.innerHTML = '&#9790;';
+    label.textContent = 'Dark';
+  }
+}
+</script>
+</body>
+</html>
